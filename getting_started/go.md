@@ -14,5 +14,6 @@
 	export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
 	```
 	执行命令```source /etc/profile```使环境变量生效
+	
 
 
