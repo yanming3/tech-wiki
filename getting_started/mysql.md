@@ -66,7 +66,7 @@
  	  数据库文件修复
  	  
 	``` shell
-	 mysql_install_db --defaults-file=/etc/my.cnf  --user=root --basedir=/usr --datadir=/home/mysql/data
+	 mysql_install_db --defaults-file=/etc/my.cnf  --user=root --basedir=/usr --datadir=/data/mysql
 	```
  
    修改密码
@@ -93,7 +93,8 @@
     server-id=1
     log-bin=mysql-bin
     binlog_format = "MIXED"
-    binlog-do-db=fansz
+    binlog-do-db=disc_user_center
+    binlog-do-db=ods_push_info
     binlog-ignore-db=mysql 
     sync_binlog=1 
     innodb_flush_log_at_trx_commit=1
@@ -102,7 +103,8 @@
     server-id=2
     log-bin=mysql-bin
     binlog_format = "MIXED"
-    replicate-do-db=fansz
+    replicate-do-db=disc_user_center
+    replicate-do-db=ods_push_info
     replicate-ignore-db=mysql
     relay-log=mysqld-relay-bin
 	
@@ -111,13 +113,25 @@
 		
 	CREATE USER 'repl'@'%.mydomain.com' IDENTIFIED BY 'slavepass';
 	GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%.mydomain.com';
-     
-3.数据同步
 
-    * 导出数据
-    FLUSH TABLES WITH READ LOCK;
-    mysqldump --all-databases --master-data > dbdump.db
+3.常用命令
     
+     SHOW SLAVE HOSTS;
+     SHOW MASTER STATUS;
+     SHOW SLAVE STATUS;
+     STOP SLAVE;
+	   START SLAVE;  
+	      
+4.数据同步
+
+    * Master只读
+    FLUSH TABLES WITH READ LOCK;
+    SET GLOBAL read_only = ON;
+    
+    * 导出数据
+    mysqldump --all-databases --master-data > dbdump.db
+    或
+    mysqldump --databases disc_user_center ods_push_info >dbdump.db
     mysqladmin shutdown
     tar cf /tmp/db.tar ./data
     
@@ -125,8 +139,13 @@
     mysql < fulldb.dump
     tar xvf dbdump.tar）；
     
+    *解锁Master
+     SET GLOBAL read_only = OFF;
+	  UNLOCK TABLES;
+
     ＊ 启用主从复制 
-    change master to master_host='192.168.88.6', master_user='backup', master_password='fansz!23456',master_log_pos=508,master_log_file='mysql-bin.000001';
+    mysqladmin start-slave
+    change master to master_host='10.36.40.41', master_user='repl', master_password='Creditease4152',master_log_pos=1029,master_log_file='mysql-bin.000009';
     show master status可以查询到master_log_file和master_log_pos参数；
    
    
