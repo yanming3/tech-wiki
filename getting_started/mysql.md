@@ -1,12 +1,12 @@
 # Mysql安装配置
 1. 下载
 
-	```shell
+	```bash
 	wget 
 	```
 2. 安装
 
-	```shell
+	```bash
 	tar -xvf MySQL-5.6.29-1.el7.x86_64.rpm-bundle.tar
 	rpm -ivh MySQL-devel-5.6.29-1.el7.x86_64.rpm
 	rpm -ivh MySQL-server-5.6.29-1.el7.x86_64.rpm
@@ -15,17 +15,21 @@
 3. 配置
  创建```/etc/my.cnf```文件，内容如下：
  
-	 ```shell
+	 ```bash
 	[client]
 	port = 3306
 	socket = /tmp/mysql.sock
-	default-character-set = utf8mb4
 	
 	[mysql]
 	default-character-set = utf8mb4
 	
 	[mysqld]
+	gtid-mode=on
+	enforce-gtid-consistency=true
+	log_slave_updates=1 #上面3句配置启用了GTIDS,master和slave都要进行配置
 	
+	rpl_semi_sync_master_enabled=1
+	rpl_semi_sync_master_timeout=1000 #启用半同步复制
 	# Remove leading # and set to the amount of RAM for the most important data
 	# cache in MySQL. Start at 70% of total RAM for dedicated server, else 10%.
 	# innodb_buffer_pool_size = 128M
@@ -61,17 +65,33 @@
 	
 	sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
 	 ```
+	 
+	 4. 启用半同步复制
+	master:
 	
-4. Tips
- 	  数据库文件修复
+	  ```sql
+    install plugin rpl_semi_sync_master SONAME 'semisync_master.so';
+    SET GLOBAL rpl_semi_sync_master_enabled=1; 
+    SET GLOBAL rpl_semi_sync_master_timeout=1000; 
+   ```
+slave:
+
+     ```sql
+     install plugin rpl_semi_sync_slave SONAME 'semisync_slave.so';
+     set global rpl_semi_sync_slave_enabled=1;
+     STOP SLAVE; 
+     CHANGE MASTER TO master_heartbeat_period= 1000; 
+     START SLAVE;
+   ```
+5. 数据库文件修复
  	  
-	``` shell
+ 	 ``` bash
 	 mysql_install_db --defaults-file=/etc/my.cnf  --user=root --basedir=/usr --datadir=/data/mysql
-	```
+	 ```
  
    修改密码
    
-	 ``` shell
+	 ``` bash
    /usr/bin/mysqladmin -u root password new-password
    /usr/bin/mysqladmin -u root -h localhost password new-password
    /usr/bin/mysql_secure_installation
@@ -79,7 +99,7 @@
 	 
    创建数据库
    
-   ``` shell
+   ``` bash
    create database fansz;
    grant all privileges on fansz.* to fansz_dev@"%" identified by 'fansz_dev';
    flush privileges;
@@ -96,6 +116,7 @@
     binlog-do-db=disc_user_center
     binlog-do-db=ods_push_info
     binlog-ignore-db=mysql 
+    log_slave_updates=1
     sync_binlog=1 
     innodb_flush_log_at_trx_commit=1
     
@@ -103,8 +124,10 @@
     server-id=2
     log-bin=mysql-bin
     binlog_format = "MIXED"
-    replicate-do-db=disc_user_center
-    replicate-do-db=ods_push_info
+    #replicate-do-db=disc_user_center
+    #replicate-do-db=ods_push_info
+    replicate-wild-do-table=disc_user_center.info_cfg
+ 	 replicate-wild-do-table=ods_push_info.%
     replicate-ignore-db=mysql
     relay-log=mysqld-relay-bin
 	
@@ -118,7 +141,7 @@
     
      SHOW SLAVE HOSTS;
      SHOW MASTER STATUS;
-     SHOW SLAVE STATUS;
+     SHOW SLAVE STATUS\G;
      STOP SLAVE;
 	   START SLAVE;  
 	      
@@ -129,12 +152,12 @@
     SET GLOBAL read_only = ON;
     
     * 导出数据
-    mysqldump --all-databases --master-data > dbdump.db
+    mysqldump --all-databases --master-data=1 > dbdump.db
     或
     mysqldump --databases disc_user_center ods_push_info >dbdump.db
     mysqladmin shutdown
     tar cf /tmp/db.tar ./data
-    
+    --master-data=1不用再执行change master语句
     * 导入数据
     mysql < fulldb.dump
     tar xvf dbdump.tar）；
@@ -145,10 +168,12 @@
 
     ＊ 启用主从复制 
     mysqladmin start-slave
-    change master to master_host='10.36.40.41', master_user='repl', master_password='Creditease4152',master_log_pos=1029,master_log_file='mysql-bin.000009';
+    change master to master_host='10.36.40.26', master_user='f_test', master_password='f_test_2015',master_log_pos=195,master_log_file='mysql-bin.000005';
     show master status可以查询到master_log_file和master_log_pos参数；
    
-   
+    binlog转换:  
+    mysqlbinlog mysqld-relay-bin.000004 --base64-output=decode-rows -v > decoded.log
+ 
 
    
    

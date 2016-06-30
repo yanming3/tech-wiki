@@ -158,6 +158,10 @@ listen elk-console
 5. 监控界面访问地址:
 http://121.43.188.107/haproxy?stats
 
+6. 平滑重启：
+haproxy -f /etc/haproxy/haproxy.cfg -sf `cat /var/run/haproxy.pid`
+
+
 
 ## 配置SSL
 ## 生成ssl证书
@@ -220,12 +224,11 @@ openssl pkcs12 -in push.p12 -out push.pem -passin pass:'push!23456' -passout pas
 ``` shell
 keytool -export -alias push -keystore push.jks -rfc -file push.cer
 或
-keytool -export -alias push -file push.crt -keystore push.jks
+keytool -export -alias push -keystore push.jks -file push.crt 
 keytool -import -alias push -file push.cer  -keystore pushtrusted.jks 
 ```
 ## Android证书（bks)
-keytool -import -alias push -file push.crt -keystore push.bks -storetype BKS -providerClass org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath bcprov-jdk15on-146.jar
-
+keytool  -import  -alias push -file push.cer -keystore push.bks -storepass 'push!23456' -keypass 'push!23456' -storetype BKS -providerClass org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath bcprov-jdk15on-146.jar
 
 	
 
