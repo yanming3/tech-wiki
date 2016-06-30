@@ -2,7 +2,7 @@
 redis基于请求响应模型，协议力求简单、快捷，详情请参考[官方规范文档](http://redis.io/topics/protocol)。
 
 
-![redis协议](/Users/allan/Documents/gitbook/resources/redisProtocol.png)
+![redis协议](./../resources/redisProtocol.png)
 
 # 例子
 
